@@ -1,25 +1,44 @@
-const getEl = document.getElementById("getCount");
-const headEl = document.getElementById("headCount");
-const postEl = document.getElementById("postCount");
-const resetBtn = document.getElementById("resetBtn");
-
-function updateCounts() {
-  browser.runtime.sendMessage({ type: "getBlockedCounts" })
-    .then(counts => {
-      getEl.textContent = counts.GET;
-      headEl.textContent = counts.HEAD;
-      postEl.textContent = counts.POST;
-    });
+// Function to update the counts in the HTML
+function updateCounts(counts) {
+    const getHeadCount = counts.GET + counts.HEAD;
+    const postCount = counts.POST;
+    const totalCount = getHeadCount + postCount;
+    
+    // Update display elements
+    document.getElementById('getHeadCount').textContent = getHeadCount;
+    document.getElementById('postCount').textContent = postCount;
+    document.getElementById('totalCount').textContent = totalCount;
 }
 
-// Update every second
-setInterval(updateCounts, 1000);
+// Function to fetch the counts from the background script
+function fetchCounts() {
+    // Send a message to background.js requesting the blocked counts
+    browser.runtime.sendMessage({ type: "getBlockedCounts" })
+        .then(response => {
+            if (response) {
+                updateCounts(response);
+            }
+        })
+        .catch(error => {
+            console.error("Error fetching counts:", error);
+        });
+}
 
-// Reset button
-resetBtn.addEventListener("click", () => {
-  browser.runtime.sendMessage({ type: "resetCounts" })
-    .then(() => updateCounts());
+// Event listener for the Reset button
+document.getElementById('resetBtn').addEventListener('click', () => {
+    // Send a message to background.js to reset the counters
+    browser.runtime.sendMessage({ type: "resetCounts" })
+        .then(response => {
+            if (response && response.status === "reset") {
+                // Update the display immediately after a successful reset
+                updateCounts({ GET: 0, HEAD: 0, POST: 0 });
+                console.log("Counts reset successfully.");
+            }
+        })
+        .catch(error => {
+            console.error("Error resetting counts:", error);
+        });
 });
 
-// Initial update
-updateCounts();
+// Fetch counts when the popup is opened
+fetchCounts();

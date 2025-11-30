@@ -1,18 +1,36 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <style>
-    body { font-family: sans-serif; padding: 10px; }
-    .count { margin-bottom: 5px; }
-    button { margin-top: 10px; }
-  </style>
+    <meta charset="utf-8">
+    <title>Ad Blocker Status</title>
+    <style>
+        body { font-family: sans-serif; min-width: 250px; padding: 10px; }
+        h2 { border-bottom: 2px solid #ccc; padding-bottom: 5px; margin-top: 0; }
+        .count-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 1.1em; }
+        .count-label { font-weight: bold; }
+        .total-count { font-size: 1.4em; font-weight: bold; color: #d9534f; margin-top: 15px; }
+        #resetBtn { display: block; width: 100%; padding: 8px; margin-top: 15px; background-color: #5bc0de; color: white; border: none; cursor: pointer; border-radius: 4px; }
+    </style>
 </head>
 <body>
-  <div class="count">GET blocked: <span id="getCount">0</span></div>
-  <div class="count">HEAD blocked: <span id="headCount">0</span></div>
-  <div class="count">POST blocked: <span id="postCount">0</span></div>
-  <button id="resetBtn">Reset counts</button>
+    <h2>🛡️ Blocked Requests</h2>
+    
+    <div class="count-row">
+        <span class="count-label">GET/HEAD Requests:</span>
+        <span id="getHeadCount">0</span>
+    </div>
 
-  <script src="popup.js"></script>
+    <div class="count-row">
+        <span class="count-label">POST Requests:</span>
+        <span id="postCount">0</span>
+    </div>
+
+    <div class="total-count">
+        Total Blocked: <span id="totalCount">0</span>
+    </div>
+
+    <button id="resetBtn">Reset Counts</button>
+
+    <script src="popup.js"></script>
 </body>
 </html>
