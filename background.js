@@ -1,27 +1,40 @@
-// Counter for blocked ads
-let blockedCount = 0;
+// Blocklists
+const getHeadBlocklist = ["doubleclick.net", "ads.example.com"];
+const postBlocklist = ["tracking.example.com"]
 
-// Hard-coded example: block requests containing "ads"
-const blocklist = ["doubleclick.net", "ads.google.com"];
+// Counters
+let counts = { GET: 0, HEAD: 0, POST: 0 };
 
 browser.webRequest.onBeforeRequest.addListener(
   (details) => {
     const url = details.url;
-    if (blocklist.some(blocked => url.includes(blocked))) {
-      blockedCount++;
-      console.log("Blocked:", url);
+    const method = details.method
+
+    if ((method === "GET" || method === "HEAD") &&
+        getHeadBlocklist.some(domain => url.includes(domain))) {
+      counts[method]++;
+      console.log(`Blocked ${method}: ${url}`);
+      return { cancel: true };
+    }
+
+    if (method === "POST" &&
+        postBlocklist.some(domain => url.includes(domain))) {
+      counts.POST++;
+      console.log(`Blocked POST: ${url}`);
       return { cancel: true };
     }
   },
+
   { urls: ["<all_urls>"] },
   ["blocking"]
 );
 
 // Respond to popup messages
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === "getBlockedCount") {
-    sendResponse({ count: blockedCount });
+  if (message.type === "getBlockedCounts") {
+    sendResponse(counts);
+  } else if (message.type === "resetCounts") {
+    counts = { GET: 0, HEAD: 0, POST: 0 };
+    sendResponse({ status: "reset" });
   }
 });
-
-console.log("working")
