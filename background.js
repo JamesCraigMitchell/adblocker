@@ -13,7 +13,7 @@ let blocklist = []; // This will hold the compiled RegExp objects
  * for network request blocking.
  */
 function parseEasyList(text) {
-    console.log("Starting EasyList parsing...");
+    console.log("Starting EasyList parsing with refined logic...");
     const lines = text.split('\n');
     const newBlocklist = [];
 
@@ -24,45 +24,51 @@ function parseEasyList(text) {
         if (!trimmed || trimmed.startsWith('!') || trimmed.startsWith('[') || trimmed.startsWith('##')) {
             continue;
         }
+
+        let rawRule = trimmed;
+        
+        // --- STEP 1: STRIP OPTIONS ---
+        // Most rules have options ($script, $third-party) which break simple parsers.
+        // We strip them to treat all rules as general domain blocks for maximum coverage.
+        if (rawRule.includes('$')) {
+            rawRule = rawRule.substring(0, rawRule.indexOf('$'));
+        }
         
         // 2. Focus on basic network blocking rules starting with || or |
-        if (!trimmed.startsWith('||') && !trimmed.startsWith('|')) {
-            // For simplicity, we skip path-only rules (e.g., /ads/...) for now,
-            // as they require checking additional contexts (like resource type).
-            continue; 
+        if (!rawRule.startsWith('||') && !rawRule.startsWith('|')) {
+            continue;
         }
 
-        // 3. Prepare the raw rule by removing leading markers
-        let rawRule = trimmed.replace(/^\|\|/, '').replace(/^\|/, '');
+        // 3. Prepare the rule by removing leading markers
+        let ruleBody = rawRule.replace(/^\|\|/, '').replace(/^\|/, '');
         
-        // 4. Escape all regex special characters in the rule first
-        // We use a helper function to ensure safety
-        let regexRule = rawRule.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // --- STEP 2: ROBUST REGEX ESCAPING ---
+        
+        // Escape all regex special characters in the rule body first
+        let regexRule = ruleBody.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-        // 5. Convert ABP wildcard (*) and separator (^) to RegEx syntax
+        // Convert ABP wildcard (*) and separator (^) to RegEx syntax
         
         // Convert * to RegEx .* (match zero or more characters)
         regexRule = regexRule.replace(/\\\*/g, '.*'); 
         
         // Convert separator ^ to RegEx (match non-alphanumeric character, end of string, or end of rule)
+        // This is a complex but necessary part of ABP syntax compliance
         regexRule = regexRule.replace(/\\\^/g, '($|[^\\w\\d\\-_\\.%\u0080-\uFFFF])');
 
-        // 6. Final rule construction based on the leading marker:
-        if (trimmed.startsWith('||')) {
-            // ||domain.com^ -> Start of URL (http/s), optional subdomain, then the rule
-            // The 'i' flag makes it case-insensitive
-            try {
+        // 4. Final rule construction based on the leading marker:
+        const isDomainRule = rawRule.startsWith('||');
+
+        try {
+            if (isDomainRule) {
+                 // ||domain.com^ -> Start of URL (http/s), optional subdomain, then the rule
                  newBlocklist.push(new RegExp(`^https?://([^/]*\\.)?${regexRule}`, 'i'));
-            } catch (e) {
-                console.warn('Skipping invalid RegEx (||):', trimmed, e);
-            }
-        } else if (trimmed.startsWith('|')) {
-             // |http://domain.com/path -> Exact start of the URL
-            try {
+            } else {
+                 // |http://domain.com/path -> Exact start of the URL
                  newBlocklist.push(new RegExp(`^${regexRule}`, 'i'));
-            } catch (e) {
-                console.warn('Skipping invalid RegEx (|):', trimmed, e);
             }
+        } catch (e) {
+            console.warn('Skipping invalid RegEx:', ruleBody, e);
         }
     }
     
