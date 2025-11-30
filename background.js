@@ -15,26 +15,6 @@ fetch(browser.runtime.getURL("blocklist.json"))
   })
   .catch(err => console.error("Failed to load local blocklist:", err));
 
-// Fetch remote blocklist
-async function fetchRemoteBlocklist() {
-  try {
-    const response = await fetch("https://raw.githubusercontent.com/username/repo/main/blocklist.json");
-    if (!response.ok) throw new Error("Failed to fetch remote blocklist");
-    const data = await response.json();
-    getHeadBlocklist = data.GET || getHeadBlocklist;
-    postBlocklist = data.POST || postBlocklist;
-    console.log("Remote blocklist loaded:", getHeadBlocklist, postBlocklist);
-  } catch (err) {
-    console.error("Remote fetch error:", err);
-  }
-}
-
-// Fetch remote on startup
-fetchRemoteBlocklist();
-
-// Refresh every hour
-setInterval(fetchRemoteBlocklist, 1000 * 60 * 60);
-
 // Listen for requests
 browser.webRequest.onBeforeRequest.addListener(
   (details) => {
