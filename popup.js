@@ -1,14 +1,24 @@
-const countEl = document.getElementById("count");
-const refreshBtn = document.getElementById("refresh");
+const getEl = document.getElementById("get-count");
+const headEl = document.getElementById("head-count");
+const postEl = document.getElementById("post-count");
 
-function updateCount() {
-  browser.runtime.sendMessage({ type: "getBlockedCount" }).then(response => {
-    countEl.textContent = response.count;
-  });
+function updateCounts() {
+  browser.runtime.sendMessage({ type: "getBlockedCounts" })
+    .then(counts => {
+      getEl.textContent = counts.GET;
+      headEl.textContent = counts.HEAD;
+      postEl.textContent = counts.POST;
+    });
 }
 
-// Update when popup opens
-updateCount();
+// Refresh button
+document.getElementById("refresh").addEventListener("click", updateCounts);
 
-// Update manually via button
-refreshBtn.addEventListener("click", updateCount);
+// Reset button
+document.getElementById("reset").addEventListener("click", () => {
+  browser.runtime.sendMessage({ type: "resetCounts" })
+    .then(() => updateCounts());
+});
+
+// Update when popup opens
+updateCounts();
