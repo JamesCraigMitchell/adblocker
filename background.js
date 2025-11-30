@@ -17,32 +17,52 @@ function parseEasyList(text) {
     const lines = text.split('\n');
     const newBlocklist = [];
 
-    // Simple parser focused on network rules (starting with ||)
     for (const line of lines) {
         const trimmed = line.trim();
         
-        // Ignore comments, headers, and element hiding rules (##)
+        // 1. Skip comments, headers, and element hiding rules
         if (!trimmed || trimmed.startsWith('!') || trimmed.startsWith('[') || trimmed.startsWith('##')) {
             continue;
         }
-
-        let regexRule = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         
-        // Handle the common ABP syntax for domain blocking: ||domain.com^
-        if (regexRule.startsWith('\\|\\|')) {
-            regexRule = regexRule.substring(4); // Remove ||
-            // Construct a RegEx that matches http:// or https://, optional subdomains, followed by the domain.
-            regexRule = `^https?://([^/]*\\.)?${regexRule.replace(/\\\^/g, '($|/.*)')}`;
-        } else {
-             // Handle simple path rules containing wildcards: /path/*/ad.js
-             regexRule = regexRule.replace(/\\\*/g, '.*');
+        // 2. Focus on basic network blocking rules starting with || or |
+        if (!trimmed.startsWith('||') && !trimmed.startsWith('|')) {
+            // For simplicity, we skip path-only rules (e.g., /ads/...) for now,
+            // as they require checking additional contexts (like resource type).
+            continue; 
         }
 
-        try {
-            // Compile the regex and push it to the list
-            newBlocklist.push(new RegExp(regexRule, 'i'));
-        } catch (e) {
-            // console.warn('Invalid regex rule:', regexRule, e);
+        // 3. Prepare the raw rule by removing leading markers
+        let rawRule = trimmed.replace(/^\|\|/, '').replace(/^\|/, '');
+        
+        // 4. Escape all regex special characters in the rule first
+        // We use a helper function to ensure safety
+        let regexRule = rawRule.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+        // 5. Convert ABP wildcard (*) and separator (^) to RegEx syntax
+        
+        // Convert * to RegEx .* (match zero or more characters)
+        regexRule = regexRule.replace(/\\\*/g, '.*'); 
+        
+        // Convert separator ^ to RegEx (match non-alphanumeric character, end of string, or end of rule)
+        regexRule = regexRule.replace(/\\\^/g, '($|[^\\w\\d\\-_\\.%\u0080-\uFFFF])');
+
+        // 6. Final rule construction based on the leading marker:
+        if (trimmed.startsWith('||')) {
+            // ||domain.com^ -> Start of URL (http/s), optional subdomain, then the rule
+            // The 'i' flag makes it case-insensitive
+            try {
+                 newBlocklist.push(new RegExp(`^https?://([^/]*\\.)?${regexRule}`, 'i'));
+            } catch (e) {
+                console.warn('Skipping invalid RegEx (||):', trimmed, e);
+            }
+        } else if (trimmed.startsWith('|')) {
+             // |http://domain.com/path -> Exact start of the URL
+            try {
+                 newBlocklist.push(new RegExp(`^${regexRule}`, 'i'));
+            } catch (e) {
+                console.warn('Skipping invalid RegEx (|):', trimmed, e);
+            }
         }
     }
     
