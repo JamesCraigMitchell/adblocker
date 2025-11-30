@@ -1,6 +1,7 @@
-const getEl = document.getElementById("get-count");
-const headEl = document.getElementById("head-count");
-const postEl = document.getElementById("post-count");
+const getEl = document.getElementById("getCount");
+const headEl = document.getElementById("headCount");
+const postEl = document.getElementById("postCount");
+const resetBtn = document.getElementById("resetBtn");
 
 function updateCounts() {
   browser.runtime.sendMessage({ type: "getBlockedCounts" })
@@ -11,14 +12,14 @@ function updateCounts() {
     });
 }
 
-// Refresh button
-document.getElementById("refresh").addEventListener("click", updateCounts);
+// Update every second
+setInterval(updateCounts, 1000);
 
 // Reset button
-document.getElementById("reset").addEventListener("click", () => {
+resetBtn.addEventListener("click", () => {
   browser.runtime.sendMessage({ type: "resetCounts" })
     .then(() => updateCounts());
 });
 
-// Update when popup opens
+// Initial update
 updateCounts();

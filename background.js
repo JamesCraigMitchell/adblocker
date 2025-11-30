@@ -1,9 +1,9 @@
-// Counters
+// Counts
 let counts = { GET: 0, HEAD: 0, POST: 0 };
 
 // Blocklists
-const getHeadBlocklist = ["doubleclick.net", "ads.example.com"];
-const postBlocklist = []
+let getHeadBlocklist = [];
+let postBlocklist = [];
 
 // Load local blocklist
 fetch(browser.runtime.getURL("blocklist.json"))
@@ -15,32 +15,54 @@ fetch(browser.runtime.getURL("blocklist.json"))
   })
   .catch(err => console.error("Failed to load local blocklist:", err));
 
+// Fetch remote blocklist
+async function fetchRemoteBlocklist() {
+  try {
+    const response = await fetch("https://raw.githubusercontent.com/username/repo/main/blocklist.json");
+    if (!response.ok) throw new Error("Failed to fetch remote blocklist");
+    const data = await response.json();
+    getHeadBlocklist = data.GET || getHeadBlocklist;
+    postBlocklist = data.POST || postBlocklist;
+    console.log("Remote blocklist loaded:", getHeadBlocklist, postBlocklist);
+  } catch (err) {
+    console.error("Remote fetch error:", err);
+  }
+}
+
+// Fetch remote on startup
+fetchRemoteBlocklist();
+
+// Refresh every hour
+setInterval(fetchRemoteBlocklist, 1000 * 60 * 60);
+
+// Listen for requests
 browser.webRequest.onBeforeRequest.addListener(
   (details) => {
-    console.log("Intercepted request:", details.method, details.url); 
     const url = details.url;
-    const method = details.method
+    const method = details.method;
 
     if ((method === "GET" || method === "HEAD") &&
         getHeadBlocklist.some(domain => url.includes(domain))) {
       counts[method]++;
-      console.log(`Blocked ${method}: ${url}, new count: ${counts[method]}`);
+      console.log(`Blocked ${method}: ${url}, count: ${counts[method]}`);
       return { cancel: true };
     }
 
     if (method === "POST" &&
         postBlocklist.some(domain => url.includes(domain))) {
       counts.POST++;
-      console.log(`Blocked POST: ${url}, new count: ${counts.POST}`);
+      console.log(`Blocked POST: ${url}, count: ${counts.POST}`);
       return { cancel: true };
     }
-  },
 
+    // Log for intercepted requests
+    console.log("Intercepted:", method, url);
+  },
   { urls: ["<all_urls>"] },
   ["blocking"]
 );
 
-// Respond to popup messages
+// Popup communication
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "getBlockedCounts") {
     sendResponse(counts);
