@@ -1,9 +1,19 @@
-// Blocklists
-const getHeadBlocklist = ["doubleclick.net", "ads.example.com"];
-const postBlocklist = ["tracking.example.com"]
-
 // Counters
 let counts = { GET: 0, HEAD: 0, POST: 0 };
+
+// Blocklists
+const getHeadBlocklist = ["doubleclick.net", "ads.example.com"];
+const postBlocklist = []
+
+// Load local blocklist
+fetch(browser.runtime.getURL("blocklist.json"))
+  .then(res => res.json())
+  .then(data => {
+    getHeadBlocklist = data.GET || [];
+    postBlocklist = data.POST || [];
+    console.log("Local blocklist loaded:", getHeadBlocklist, postBlocklist);
+  })
+  .catch(err => console.error("Failed to load local blocklist:", err));
 
 browser.webRequest.onBeforeRequest.addListener(
   (details) => {

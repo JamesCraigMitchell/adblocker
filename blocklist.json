@@ -1,0 +1,10 @@
+{
+  "GET": [
+    "ads.example.com",
+    "doubleclick.net"
+  ],
+  "POST": [
+    "tracking.example.com",
+    "analytics.example.net"
+  ]
+}
