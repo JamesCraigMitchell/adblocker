@@ -4,7 +4,7 @@ const STORAGE_KEY = 'easylist_blocking_rules';
 
 // --- STATE ---
 let counts = { GET: 0, HEAD: 0, POST: 0 };
-let blocklist = []; // This will hold the compiled RegExp objects
+let blocklist = []; 
 
 // --- BLOCKLIST MANAGEMENT FUNCTIONS ---
 
@@ -20,7 +20,7 @@ function parseEasyList(text) {
     for (const line of lines) {
         const trimmed = line.trim();
         
-        // 1. Skip comments, headers, and element hiding rules
+        // Skip comments, headers, and element hiding rules
         if (!trimmed || trimmed.startsWith('!') || trimmed.startsWith('[') || trimmed.startsWith('##')) {
             continue;
         }
@@ -28,18 +28,17 @@ function parseEasyList(text) {
         let rawRule = trimmed;
         
         // --- STEP 1: STRIP OPTIONS ---
-        // Most rules have options ($script, $third-party) which break simple parsers.
-        // We strip them to treat all rules as general domain blocks for maximum coverage.
+        // Strip options ($script, $third-party) which break simple parsers.
         if (rawRule.includes('$')) {
             rawRule = rawRule.substring(0, rawRule.indexOf('$'));
         }
         
-        // 2. Focus on basic network blocking rules starting with || or |
+        // Focus on basic network blocking rules starting with || or |
         if (!rawRule.startsWith('||') && !rawRule.startsWith('|')) {
             continue;
         }
 
-        // 3. Prepare the rule by removing leading markers
+        // Prepare the rule by removing leading markers
         let ruleBody = rawRule.replace(/^\|\|/, '').replace(/^\|/, '');
         
         // --- STEP 2: ROBUST REGEX ESCAPING ---
@@ -53,10 +52,9 @@ function parseEasyList(text) {
         regexRule = regexRule.replace(/\\\*/g, '.*'); 
         
         // Convert separator ^ to RegEx (match non-alphanumeric character, end of string, or end of rule)
-        // This is a complex but necessary part of ABP syntax compliance
         regexRule = regexRule.replace(/\\\^/g, '($|[^\\w\\d\\-_\\.%\u0080-\uFFFF])');
 
-        // 4. Final rule construction based on the leading marker:
+        // Final rule construction based on the leading marker:
         const isDomainRule = rawRule.startsWith('||');
 
         try {
@@ -119,11 +117,10 @@ async function loadBlocklistFromStorage() {
 
 // --- INITIALIZATION AND SCHEDULING ---
 
-// 1. Load from storage first for fast startup
+// Load from storage first for fast startup
 loadBlocklistFromStorage();
 
-// 2. Fetch/update remotely after a short delay (e.g., 5 seconds)
-// In a production extension, this would typically run daily or weekly.
+// Fetch/update remotely after a short delay (e.g., 5 seconds)
 setTimeout(fetchAndParseEasyList, 5000); 
 
 
